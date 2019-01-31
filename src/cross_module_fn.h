@@ -20,6 +20,7 @@
 #include "process_utility.h"
 #include "with_clause_parser.h"
 #include "continuous_agg.h"
+#include "compat.h"
 
 /*
  * To define a cross-module function add it to this struct, add a default
