@@ -34,6 +34,7 @@
 typedef struct JsonbParseState JsonbParseState;
 typedef struct Hypertable Hypertable;
 typedef struct Chunk Chunk;
+typedef struct CopyChunkState CopyChunkState;
 
 typedef struct CrossModuleFunctions
 {
@@ -128,6 +129,8 @@ typedef struct CrossModuleFunctions
 	void (*create_chunk_on_servers)(Chunk *chunk, Hypertable *ht);
 	Path *(*server_dispatch_path_create)(PlannerInfo *root, ModifyTablePath *mtpath,
 										 Index hypertable_rti, int subpath_index);
+	void (*distributed_copy)(const CopyStmt *stmt, uint64 *processed, CopyChunkState *ccstate,
+							 List *attnums);
 } CrossModuleFunctions;
 
 extern TSDLLEXPORT CrossModuleFunctions *ts_cm_functions;
