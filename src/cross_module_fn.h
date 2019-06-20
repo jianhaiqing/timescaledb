@@ -22,6 +22,7 @@
 #include "continuous_agg.h"
 #include "compat.h"
 #include "plan_expand_hypertable.h"
+#include "planner.h"
 
 /*
  * To define a cross-module function add it to this struct, add a default
@@ -53,7 +54,8 @@ typedef struct CrossModuleFunctions
 	Datum (*remove_drop_chunks_policy)(PG_FUNCTION_ARGS);
 	Datum (*remove_reorder_policy)(PG_FUNCTION_ARGS);
 	Datum (*remove_compress_chunks_policy)(PG_FUNCTION_ARGS);
-	void (*create_upper_paths_hook)(PlannerInfo *, UpperRelationKind, RelOptInfo *, RelOptInfo *);
+	void (*create_upper_paths_hook)(PlannerInfo *, UpperRelationKind, RelOptInfo *, RelOptInfo *,
+									TsRelType input_reltype, Hypertable *ht, void *extra);
 	void (*set_rel_pathlist_dml)(PlannerInfo *, RelOptInfo *, Index, RangeTblEntry *, Hypertable *);
 	void (*set_rel_pathlist_query)(PlannerInfo *, RelOptInfo *, Index, RangeTblEntry *,
 								   Hypertable *);
