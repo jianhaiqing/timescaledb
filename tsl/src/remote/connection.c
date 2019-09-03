@@ -1238,7 +1238,10 @@ remote_connection_drain(PGconn *conn, TimestampTz endtime)
 
 			/* If timeout has expired, give up, else get sleep time. */
 			if (now >= endtime)
+			{
+				elog(WARNING, "timeout occured while trying to drain the connection");
 				return false;
+			}
 
 			TimestampDifference(now, endtime, &secs, &microsecs);
 
@@ -1305,7 +1308,7 @@ remote_connection_cancel_query(TSConnection *conn)
 
 	/*
 	 * Issue cancel request.  Unfortunately, there's no good way to limit the
-	 * amount of time that we might block inside PQgetCancel().
+	 * amount of time that we might block inside PQcancel().
 	 */
 	if ((cancel = PQgetCancel(conn->pg_conn)))
 	{
