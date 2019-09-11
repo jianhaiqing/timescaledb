@@ -15,26 +15,30 @@
 #include <access/xact.h>
 #include <cache.h>
 #include <nodes/pg_list.h>
-#include <foreign/foreign.h>
-#include <libpq-fe.h>
 
-#include <hypertable_data_node.h>
 #include <dimension.h>
 #include <errors.h>
 
 #include "errors.h"
-#include "fdw/fdw.h"
 #include "hypertable.h"
-#include "dimension.h"
 #include "license.h"
 #include "utils.h"
 #include "hypertable_cache.h"
+
+#if PG11_GE
+#include <foreign/foreign.h>
+#include <libpq-fe.h>
+
+#include <hypertable_data_node.h>
+
+#include "fdw/fdw.h"
 #include "data_node.h"
 #include "deparse.h"
 #include "remote/dist_commands.h"
 #include "compat.h"
 #include "hypertable_data_node.h"
 #include <extension.h>
+#endif /*  PG11_GE */
 
 Datum
 hypertable_valid_ts_interval(PG_FUNCTION_ARGS)
