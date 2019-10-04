@@ -378,28 +378,6 @@ add_distributed_id_to_data_node(TSConnection *conn)
 	remote_result_close(res);
 }
 
-static bool
-remove_distributed_id_from_backend(TSConnection *conn, char **errmsg)
-{
-	bool result = false;
-	PGresult *pgres;
-
-	Assert(NULL != conn);
-
-	pgres = remote_connection_exec(conn,
-								   "SELECT * FROM "
-								   "_timescaledb_internal.remove_from_dist_db();");
-
-	if (PQresultStatus(pgres) == PGRES_TUPLES_OK)
-		result = true;
-	else if (NULL != errmsg)
-		*errmsg = pchomp(PQresultErrorMessage(pgres));
-
-	remote_result_close(pgres);
-
-	return result;
-}
-
 /**
  * Get the configured server port for the server as an integer.
  *
@@ -1043,13 +1021,15 @@ data_node_delete(PG_FUNCTION_ARGS)
 	List *hypertable_data_nodes = NIL;
 	DropStmt stmt;
 	ObjectAddress address;
-	ObjectAddress secondaryObject = InvalidObjectAddress;
+	ObjectAddress secondary_object = {
+		.classId = InvalidOid,
+		.objectId = InvalidOid,
+		.objectSubId = 0,
+	};
 	Node *parsetree = NULL;
-	TSConnection *conn;
 	TSConnectionId cid;
 	Cache *conn_cache;
 	ForeignServer *server;
-	char *errstr;
 
 	/* Need USAGE to detach. Further owner check done when executing the DROP
 	 * statement. */
@@ -1089,31 +1069,6 @@ data_node_delete(PG_FUNCTION_ARGS)
 
 	parsetree = (Node *) &stmt;
 
-	/* Try to remove the distribute database ID from the remote data node. We
-	 * need to allow failures here if "force" option is set, otherwise we
-	 * won't be able to delete a failed data node. */
-	conn = remote_connection_open_nothrow(server->serverid, GetUserId(), &errstr);
-
-	if (NULL == conn)
-	{
-		ereport(force ? WARNING : ERROR,
-				(errcode(ERRCODE_SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION),
-				 errmsg("could not connect to data node \"%s\"", node_name),
-				 errdetail("%s", errstr),
-				 force ? 0 : errhint("Use the force option to delete the data node anyway.")));
-	}
-	else
-	{
-		if (!remove_distributed_id_from_backend(conn, &errstr))
-			ereport(force ? WARNING : ERROR,
-					(errcode(ERRCODE_TS_INTERNAL_ERROR),
-					 errmsg("could not remove distributed ID from data node \"%s\"", node_name),
-					 errdetail("%s", errstr),
-					 force ? 0 : errhint("Use the force option to delete the data node anyway.")));
-
-		remote_connection_close(conn);
-	}
-
 	/* Make sure event triggers are invoked so that all dropped objects
 	 * are collected during a cascading drop. This ensures all dependent
 	 * objects get cleaned up. */
@@ -1123,7 +1078,7 @@ data_node_delete(PG_FUNCTION_ARGS)
 	{
 		EventTriggerDDLCommandStart(parsetree);
 		RemoveObjects(&stmt);
-		EventTriggerCollectSimpleCommand(address, secondaryObject, parsetree);
+		EventTriggerCollectSimpleCommand(address, secondary_object, parsetree);
 		EventTriggerSQLDrop(parsetree);
 		EventTriggerDDLCommandEnd(parsetree);
 	}
